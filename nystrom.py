@@ -91,7 +91,7 @@ class NystromTransformer():
 
         # compute the kernel matrix for our basis kernel
         K_hat = self._compute_kernel(self.X_hat)
-        print('computed K_hat with shape', K_hat.shape)
+        # print('computed K_hat with shape', K_hat.shape)
 
         # K_b = self._compute_kernel(X, self.X_hat)
         # K_r = K_b @ np.linalg.inv(K_hat) @ K_b.T
@@ -103,8 +103,8 @@ class NystromTransformer():
         self.normalization_ = np.dot(U / np.sqrt(S), V)
         self.components_ = self.X_hat
         self.component_indices_ = samp
-        print('normalization has shape', self.normalization_.shape)
-        print('components has shape', self.X_hat.shape)
+        # print('normalization has shape', self.normalization_.shape)
+        # print('components has shape', self.X_hat.shape)
         
         # 1 / D creates the inverse, only true because it's diagonal
         # d = d[0:n_components]
@@ -119,12 +119,12 @@ class NystromTransformer():
         return self
     
     def transform(self, X):
-        print('transforming X with shape', X.shape)
+        # print('transforming X with shape', X.shape)
         # kernel_space_X = self._compute_kernel(X, self.X_hat)
         kernel_space_X = self._compute_kernel(X, self.X_hat)
-        print('X in the kernel space has shape', kernel_space_X.shape)
+        # print('X in the kernel space has shape', kernel_space_X.shape)
         to_ret = np.dot(kernel_space_X, self.normalization_.T)
-        print('normalized X has shape', to_ret.shape)
+        # print('normalized X has shape', to_ret.shape)
         return to_ret
         # z = self.Z.T @ kernel_space_X.T
         # print('z(X) has shape', z.shape)

@@ -1,5 +1,6 @@
 import numpy as np
 
+import util
 # generates two classes for binary classification
 # the classes are overlapping circles
 
@@ -17,24 +18,29 @@ def random_hypersphere_point(d, n, r=1, m=0, sd=1):
 
     return [[points[i,j] * sqr_red[i] *r for j in range(d)] for i in range(n)]
 
-def shuffle(a, b):
-    # Generate the permutation index array.
-    permutation = np.random.permutation(a.shape[0])
-    # Shuffle the arrays by giving the permutation in the square brackets.
-    return a[permutation], b[permutation]
-
-def generate_data(d=2, n=1000, r_1=1, r_2=2):
+def generate_data(d=2, n=1000, r_1=1, r_2=2, u=None):
     x1 = random_hypersphere_point(d, n, r_1)
     x2 = random_hypersphere_point(d, n, r_2)
     X = x1 + x2
     X = np.array(X)
     y = np.array([0 for _ in range(n)] + [1 for _ in range(n)])
-    # y.shape = (-1, 1)
 
     # shuffle the data
-    X, y = shuffle(X, y)
+    X, y = util.shuffle(X, y)
 
-    return X, y
+    # y.shape = (-1, 1)
+    if u is not None:
+        # print('generating unlabeled sphere data')
+        u1 = random_hypersphere_point(d, u, r_1)
+        u2 = random_hypersphere_point(d, u, r_2)
+        # print('U has components:', len(u1), len(u2)) 
+        U = u1 + u2
+        U = np.array(U)
+        np.random.shuffle(U)
+        # print('U is:', U.shape)
+        return X, y, U
+    else:
+        return X, y
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt

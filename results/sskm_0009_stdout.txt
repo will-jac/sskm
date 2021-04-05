@@ -1,0 +1,41 @@
+generated adult data, X: (45222, 54) y: (45222,)
+---- running test: sphere  ----
+rff, D=2  : acc: 0.6333333333333333
+rff, D=5  : acc: 0.5766666666666667
+rff, D=10  : acc: 0.7783333333333333
+rff, D=100  : acc: 0.9983333333333333
+Nystrom + Ridge, m=2  : acc: 1.0
+Nystrom + Ridge, m=5  : acc: 1.0
+Nystrom + Ridge, m=10  : acc: 1.0
+Nystrom + Ridge, m=100  : acc: 1.0
+SVC  : acc: 0.4816666666666667
+---- running test: checkerboard  ----
+rff, D=2  : acc: 0.4746
+rff, D=5  : acc: 0.5192666666666667
+rff, D=10  : acc: 0.5431
+rff, D=100  : acc: 0.7499333333333333
+Nystrom + Ridge, m=2  : acc: 0.5210666666666667
+Nystrom + Ridge, m=5  : acc: 0.4952
+Nystrom + Ridge, m=10  : acc: 0.5149666666666667
+Nystrom + Ridge, m=100  : acc: 0.7490333333333333
+SVC  : acc: 0.9701666666666666
+---- running test: checkerboard + noise  ----
+rff, D=2  : acc: 0.5144333333333333
+rff, D=5  : acc: 0.5050666666666667
+rff, D=10  : acc: 0.5466
+rff, D=100  : acc: 0.6798666666666666
+Nystrom + Ridge, m=2  : acc: 0.5045999999999999
+Nystrom + Ridge, m=5  : acc: 0.4943666666666666
+Nystrom + Ridge, m=10  : acc: 0.5624666666666667
+Nystrom + Ridge, m=100  : acc: 0.6769000000000001
+SVC  : acc: 0.7834666666666666
+---- running test: adult  ----
+rff, D=2  : acc: 0.7558045256873296
+rff, D=5  : acc: 0.7581631900936094
+rff, D=10  : acc: 0.7537406943318345
+rff, D=100  : acc: 0.7538144025945308
+Nystrom + Ridge, m=2  : acc: 0.7535195695437459
+Nystrom + Ridge, m=5  : acc: 0.7659762659394118
+Nystrom + Ridge, m=10  : acc: 0.760079604923712
+Nystrom + Ridge, m=100  : acc: 0.7876464951721088
+SVC  : acc: 0.820667796860028

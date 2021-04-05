@@ -38,6 +38,7 @@ class rff:
         k : kernel to use (`gaussian`, `laplacian`)
         method : method used to solve linear regression (`linear`, `cholesky`)
         """
+        self.name = 'rff, D='+str(D)
         if k == 'laplacian':
             self.p = laplacian
         elif k == 'cauchy':

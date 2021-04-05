@@ -1,70 +1,48 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import argparse
 
 # ML methods
-from random_fourier_features import rff
-from nystrom import NystromTransformer
-
-import kernel
-from SVM import SVM
-
+# others
 from sklearn.neural_network import MLPClassifier
 from sklearn.svm import SVC
 
-def mse(predict, true, axis=0):
-    t = 0
-    for i in range(len(predict)):
-        t += (predict[i] - true[i])**2
-    return np.sqrt(t / len(predict))
+# mine
+from random_fourier_features import rff
+from nystrom import NystromTransformer
+from manifold import ManifoldRLS, LapRLS
+from ss_manifold import SSManifoldRLS, SSLapRLS
+from coreg import SSCoReg
+import kernel
 
-# for classification
-def percent_wrong(predict, true):
-    n = len(predict)
-    wrong = 0
-    for i in range(n):
-        if predict[i] != true[i]:
-            wrong += 1
-    return 1.0 * wrong / n
+from SVM import SVM
 
-from collections import namedtuple
+import util
 
-def train_test_valid_split(X, y, split=(0.8, 0.1, 0.1), shuffle=True):
-    assert sum(split) == 1
-    assert X.shape[0] == y.shape[0]
+# data sets
+import data.adult as adult
+import data.sphere as sphere
+import data.checkerboard as checkerboard
 
-    # first, shuffle the data
-    if shuffle:
-        permutation = np.random.permutation(X.shape[0])
-        # Shuffle the arrays by giving the permutation in the square brackets.
-        X, y = X[permutation], y[permutation]
-    
-    # used to return  data so it can be accessed as train.X, train.y
-    Data = namedtuple('Data', ['X', 'y'])
+def test_runner(models, test_funcs, test_funcs_names):
+    for test_f, test_name in zip(test_funcs, test_funcs_names):
+        print('---- running test:', test_name, ' ----')
+        for model in models:
+            test_f(model)
 
-    n = X.shape[0]
-    start = 0
-    stop = 0
-    # Data object used for implicit type checking / inferrence
-    split_data = [Data([],[])]*len(split)
-    for i in range(len(split)):
-        stop  = int(n * sum(split[0:i+1]))
-        split_data[i] = Data(X[start:stop,:], y[start:stop])
-        start = stop
-
-    return tuple(split_data)
-
-def sphere_test(models, model_names = None, n = 1000, d = 1000, show_plots=True):
-    
-    if model_names is None:
-        model_names = ['model ' + str(i) for i in range(len(models))]
-
-    import data.sphere as sphere
-    X, y = sphere.generate_data(n=n, d=d)
-    (train, test) = train_test_valid_split(X, y, split=(0.7, 0.3))
-
+def sphere_test(model, n=1000, u=None, d = 1000, show_plots=False):
+    if u is None:
+        X, y = sphere.generate_data(n=n, d=d)
+        (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3))
+    else:
+        print('generating unlabeled data')
+        X, y, U = sphere.generate_data(n=n, d=d, u=u)
+        # print('U is:', U.shape)
+        (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3), U=U)
+        print('generated data has shape:', train.X.shape, test.X.shape)
     if show_plots:
+        import matplotlib.pyplot as plt
         f = plt.figure()
         plt.title('Labeled Data (input)')
         labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y]
@@ -72,55 +50,147 @@ def sphere_test(models, model_names = None, n = 1000, d = 1000, show_plots=True)
         plt.show()
         plt.close(f)
 
-    for model, name in zip(models, model_names):
+    # for model, name in zip(models, model_names):
+    if u is None:
         model.fit(train.X, train.y)
+    else:
+        model.fit(train.X, train.y, train.U)
 
-        y_pred = model.predict(test.X)
-        y_pred = y_pred.ravel()
-        
-        # classify
-        for i, y_p in enumerate(y_pred):
-            if y_p > 0.5:
-                y_pred[i] = 1
-            else:
-                y_pred[i] = 0
-        wrong = percent_wrong(y_pred.ravel(), test.y.ravel())
-        print(name, '%wrong:', wrong)
+    y_pred = model.predict(test.X)
+    y_pred = y_pred.ravel()
+    
+    # classify
+    for i, y_p in enumerate(y_pred):
+        if y_p > 0.5:
+            y_pred[i] = 1
+        else:
+            y_pred[i] = 0
+    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
+    acc = 1.0 - wrong
+    print(model.name, ' : acc:', acc)
 
-        if show_plots:
-            plt.figure()
-            plt.title(f'{name} on sphere (d={d}), %wrong={wrong}')
-            # plot (for sphere)
-            labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y_pred]
-            plt.scatter(test.X[:,0], test.X[:,1], c=labels)
-            plt.show()
-            plt.close(f)
+    if show_plots:
+        plt.figure()
+        plt.title(f'{model.name} on sphere (d={d}), %wrong={wrong}')
+        # plot (for sphere)
+        labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y_pred]
+        plt.scatter(test.X[:,0], test.X[:,1], c=labels)
+        plt.show()
+        plt.close(f)
 
-def checkerboard_test(model, model_name, shape, n_clusters, noise)
+def checkerboard_test(model, shape=(1000, 2), noise=0.1, seed=None):
+    X, y = checkerboard.generate_data(shape=shape, noise=noise, seed=seed, shuffle=True)
+    
+    (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3))
 
-def adult_test(models, model_names = None):
+    model.fit(train.X, train.y)
 
-    if model_names is None:
-        model_names = ['model ' + str(i) for i in range(len(models))]
+    y_pred = model.predict(test.X)
+    y_pred = y_pred.ravel()
+    
+    # classify
+    for i, y_p in enumerate(y_pred):
+        if y_p > 0.5:
+            y_pred[i] = 1
+        else:
+            y_pred[i] = 0
+    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
+    acc = 1.0 - wrong
+    print(model.name, ' : acc:', acc)
 
-    import data.adult as adult
+    # labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y_pred]
+    # plt.scatter(test.X[:,0], test.X[:,1], c=labels)
+    # plt.show()
 
-    (train, test) = train_test_valid_split(adult.X, adult.y, split=(0.7, 0.3))
+def adult_test(model):
 
-    for model, name in zip(models, model_names):
-        model.fit(train.X, train.y)
+    (train, test) = util.train_test_valid_split(adult.X, adult.y, split=(0.7, 0.3))
 
-        y_pred = model.predict(test.X)
-        y_pred = y_pred.ravel()
-        
-        # classify
-        for i, y_p in enumerate(y_pred):
-            if y_p > 0.5: # TODO: should be 0?
-                y_pred[i] = 1
-            else:
-                y_pred[i] = -1
-        wrong = percent_wrong(y_pred.ravel(), test.y.ravel())
-        print(name, '%wrong:', wrong)
+    # for model, name in zip(models, model_names):
+    model.fit(train.X, train.y)
+
+    y_pred = model.predict(test.X)
+    y_pred = y_pred.ravel()
+    
+    # classify
+    for i, y_p in enumerate(y_pred):
+        if y_p > 0.5: # TODO: should be 0?
+            y_pred[i] = 1
+        else:
+            y_pred[i] = -1
+    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
+    acc = 1.0 - wrong
+    print(model.name, ' : acc:', acc)
+
+def draw_decision_boundary(model, d=2, lim=(-4,4), n=100, cutoff=0.5):
+    import matplotlib.pyplot as plt
+    X = np.empty((n**2, 2))
+    for i in range(n):
+        for j in range(n):
+            X[i*n+j] = [float(i + lim[0]) / n, float(j + lim[0]) / n]
+    y = model.predict(X)
+    labels = ['#1f77b4' if abs(l) < cutoff else '#ff7f0e' for l in y]
+    plt.scatter(X[:,0], X[:,1], c=labels)
+    plt.show()
+
+
+# if __name__ == "__main__":
+if True:
+    # parser = create_parser()
+    # args = parser.parse_args()
+    from sklearn.kernel_approximation import Nystroem
+
+    class Nystrom_Ridge():
+        def __init__(self, n_components=1000):
+            self.name = 'Nystrom + Ridge, m='+str(n_components)
+            self.transformer =  NystromTransformer('rbf', n_components=n_components, gamma=0.2) 
+            # self.transformer = Nystroem(gamma=0.2, n_components=10) 
+            self.kernel_method = kernel.RidgeKernel('precomputed', 1.0)
+        def fit(self, X, y):
+            X = self.transformer.fit(X, y).transform(X)
+            self.kernel_method.fit(X, y)
+
+        def predict(self, X):
+            X = self.transformer.transform(X)
+            return self.kernel_method.predict(X)
+
+    svm = SVC()
+    svm.name = 'SVM'
+
+    models = [
+        # rff(D=10),
+        # rff(D=100),
+        # rff(D=1000),
+        # Nystrom_Ridge(10),
+        # Nystrom_Ridge(100),
+        # Nystrom_Ridge(1000),
+        # svm,
+        # kernel.LS(),
+        # kernel.KLS('rbf'),
+        # kernel.RidgeKernel('rbf', 1.0),
+        # ManifoldRLS('rbf', 0.1),
+        # SSManifoldRLS('rbf', 0.1),
+        # SSLapRLS('rbf', 0.1, 0.1),
+        SSCoReg('rbf', 0.1, 1, 1),
+    ]
+    tests = [
+        lambda model : sphere_test(model, n=100, d=2, u=100, show_plots=False),
+        # lambda model : checkerboard_test(model, seed=1, noise=0.0),
+        # lambda model : checkerboard_test(model, seed=1, noise=0.2),
+        # lambda model : adult_test(model)
+    ]
+    test_names = [
+        'sphere', 'checkerboard', 'checkerboard_noise', 'adult'
+    ]
+
+    # X, y = checkerboard.generate_data((100000, 2), noise=0.1, seed=1, shuffle=False)
+    # labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y]
+    # plt.scatter(X[:,0], X[:,1], c=labels)
+    # plt.show()
+
+    test_runner(models, tests, test_names)
+
+    draw_decision_boundary(models[0])
 
 # def create_parser():
 #     parser = argparse.ArgumentParser(description='Kernel Method Bake-Off')
@@ -147,45 +217,4 @@ def adult_test(models, model_names = None):
 #         adult_test([model], [args.model])
 #     elif args.dataset == 'sphere':
         # sphere_test([model], [args.model], show_plots=True)
-    
-if __name__ == "__main__":
-    # parser = create_parser()
-    # args = parser.parse_args()
-    from sklearn.kernel_approximation import Nystroem
-
-    class Nystrom_Ridge():
-        def __init__(self):
-            self.transformer =  NystromTransformer('rbf', n_components=10, gamma=0.2) 
-            # self.transformer = Nystroem(gamma=0.2, n_components=10) 
-            self.kernel_method = kernel.RidgeKernel('precomputed', 1.0)
-        def fit(self, X, y):
-            X = self.transformer.fit(X, y).transform(X)
-            self.kernel_method.fit(X, y)
-
-        def predict(self, X):
-            X = self.transformer.transform(X)
-            return self.kernel_method.predict(X)
-
-    models = [
-        # rff(D=2),
-        rff(D=10),
-        # rff(D=100),
-        # rff(D=1000),
-        SVC(),
-        # kernel.RidgeKernel('rbf', 1.0),
-        Nystrom_Ridge(), #kernel.RidgeKernel('rbf', 1.0)
-        
-    ]
-    model_names = [
-        # 'rff d=2',
-        'rff d=10',
-        # 'rff d=100',
-        # 'rff d=1000',
-        'SVC',
-        # 'Ridge',
-        'Nystroem + Ridge',
-        
-    ]
-    sphere_test(models, model_names, d=1000, show_plots=False)
-    adult_test(models, model_names)
     

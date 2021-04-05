@@ -1,4 +1,9 @@
 import numpy as np
+from scipy import linalg
+from scipy import sparse
+from scipy.sparse import linalg as sp_linalg
+
+## Helper kernels
 
 def linear():
     return lambda x, y : np.inner(x,y)
@@ -36,9 +41,8 @@ class KernelMethod():
     which has the general solution
     f* = sum(alpha_i * K(x, x_i))
     '''
-    def __init__(self, kernel, alpha, gamma=None, degree=3.0, coef0=1.0, kernel_params=None):
+    def __init__(self, kernel, gamma=None, degree=3.0, coef0=1.0, kernel_params=None):
         self.kernel = kernel
-        self.alpha = alpha
         self.gamma = gamma
         self.degree = degree
         self.coef0 = coef0
@@ -68,7 +72,7 @@ class KernelMethod():
 
     def fit(self, X, y):
         K = self._compute_kernel(X)
-        print('computing kernel for X', X.shape, 'K has shape', K.shape)
+        # print('computing kernel for X', X.shape, 'K has shape', K.shape)
         self.X_train = X
         self._solve(K, y)
     
@@ -78,26 +82,29 @@ class KernelMethod():
     def _solve(self, K, y):
         ...
 
-# standard least-squares regression
+# standard least-squares regression w/ Ridge regression (eg L2 regularization)
 from sklearn.linear_model import Ridge as _Ridge
 
 class RidgeKernel(KernelMethod):
 
-    def __init__(self, kernel, alpha, gamma=None, degree=3, coef0=1, kernel_params=None):
-        super().__init__(kernel, alpha, gamma, degree, coef0, kernel_params)
-        self.lm = _Ridge(alpha = alpha)
+    def __init__(self, kernel, L2_coef, gamma=None, degree=3, coef0=1, kernel_params=None):
+        super().__init__(kernel, gamma, degree, coef0, kernel_params)
+        self.lm = _Ridge(alpha = L2_coef)
+        self.name = 'ridge'
 
     def _solve(self, K, y):
-        print('fitting lm to K, y:', K.shape, y.shape)
+        # print('fitting lm to K, y:', K.shape, y.shape)
         self.lm.fit(K, y)
-        print('coefs has shape', self.lm.coef_.shape)
+        # print('coefs has shape', self.lm.coef_.shape)
 
     def predict(self, X):
-        print('predicting X with shape', X.shape)
+        # print('predicting X with shape', X.shape)
         K = self._compute_kernel(X, self.X_train)
-        print('X in the kernel space has shape', K.shape)
+        # print('X in the kernel space has shape', K.shape)
         # return np.dot(K, self.dual_coef_)
-        return self.lm.predict(K)
+        p = self.lm.predict(K)
+        # print(p.shape, p)
+        return p
 
 # class RLSKernel(KernelMethod):
 #     '''
@@ -124,5 +131,54 @@ class RidgeKernel(KernelMethod):
 #         # K = np.exp(K)
 #         # return K.A.T
 
+import least_squares as ls
 
-    
+class LS():
+    def __init__(self):
+        self.name = 'least squares'
+
+    def fit(self, X, y):
+        solution = ls.solve(X, y)
+        print('*'*5, 'solution', '*'*5)
+        print(solution['message'])
+        print('optimal function value   = ', solution['fun'])
+        print('norm of the gradient     = ',
+            np.linalg.norm(solution['grad'], np.inf))
+        print('optimal variable x = ', solution['x'])
+        print('solving took %.3f sec' % solution['elapsed'])
+        self.alpha = np.array(solution['x'])
+
+    def predict(self, X):
+        p = np.dot(X, self.alpha)
+        print('predicting X', X.shape, '->', p.shape)
+        return p
+
+class KLS(KernelMethod):
+    def __init__(self, kernel, gamma=None, degree=3, coef0=1, kernel_params=None):
+        super().__init__(kernel, gamma, degree, coef0, kernel_params)
+        self.name = 'kernel least squares'
+
+    def _solve(self, K, y):
+        # print('fitting lm to K, y:', K.shape, y.shape)
+        solution = ls.solve(K, y)
+        print('*'*5, 'solution', '*'*5)
+        print(solution['message'])
+        print('optimal function value   = ', solution['fun'])
+        print('norm of the gradient     = ',
+            np.linalg.norm(solution['grad'], np.inf))
+        print('optimal variable x = ', solution['x'])
+        print('solving took %.3f sec' % solution['elapsed'])
+        # print('coefs has shape', self.lm.coef_.shape)
+        self.alpha = np.array(solution['x'])
+
+    def predict(self, X):
+        # print('predicting X with shape', X.shape)
+        K = self._compute_kernel(X, self.X_train)
+        # print('X in the kernel space has shape', K.shape)
+        # return np.dot(K, self.dual_coef_)
+        p = np.dot(K, self.alpha)
+        print('predicting X', X.shape, '->', K.shape, '->', p.shape)
+        
+        # print(p.shape, p)
+        return p
+
