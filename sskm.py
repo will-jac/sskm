@@ -27,8 +27,8 @@ def create_parser():
 
 def execute_exp(args):
 
-    if args.model in models.models:
-        model = models.models[args.model]
+    if args.method in models.models:
+        model = models.models[args.method]
     else:
         print('error: model', args.model, 'not found') 
         return
