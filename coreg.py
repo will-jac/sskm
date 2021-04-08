@@ -36,7 +36,7 @@ class SSCoRegSolver(SSKernelMethod):
         L, D_graph = construct_graph(N, self.kNN, self.weight, self.sd)
         D_graph = D_graph.toarray()
         D_norm = np.sqrt(np.linalg.inv(D_graph))
-        M = D_norm @ L.toarray() @ D_norm
+        M = np.matmul(np.matmul(D_norm , L.toarray()) , D_norm)
         M_norm = np.linalg.matrix_power(M, self.p) + 10**-6 * np.eye(M.shape[0])
         assert(M_norm.shape == (n,n))
         K_I = np.linalg.inv(M_norm)
@@ -49,18 +49,18 @@ class SSCoRegSolver(SSKernelMethod):
         assert(S.shape == (n,n))
         H = np.linalg.inv(np.eye(u) + self.mu * S[l:n,l:n])
         assert(H.shape == (u,u))
-        self.DH = DH = D @ H
+        self.DH = DH = np.matmul(D , H)
         assert(DH.shape == (l, u))
 
-        A = 1/self.manifold_coef * (K_A[0:l,0:l] + self.mu * DH @ K_A[l:n,0:l])
+        A = 1/self.manifold_coef * (K_A[0:l,0:l] + self.mu * np.matmul(DH , K_A[l:n,0:l]))
         assert(A.shape == (l,l))
         
-        Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * DH @ K_I[l:n,:])
+        Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * np.matmul(DH , K_I[l:n,:]))
         B = Bn[0:l, 0:l] #= 1/self.manifold_coef * (K_I[0:l,0:l] + self.mu * DH @ K_I[l:n,0:l])
         assert(Bn.shape == (l,n))
         assert(B.shape == (l,l))
 
-        K = S[0:l, 0:l] - self.mu * DH @ D.T
+        K = S[0:l, 0:l] - self.mu * np.matmul(DH , D.T)
         assert(K.shape == (l,l))
 
         solution = coreg_solver.solve(
@@ -119,108 +119,49 @@ class SSCoReg(SSKernelMethod):
 
         # print('computing K_A')
         # kernel 1: ambient, RLS
-        self.K_A = K_A = self._compute_kernel(N)
+                K_A = self._compute_kernel(N)
         assert(K_A.shape == (n,n))
 
-        # print('computing K_I')
-        # kernel 2: Intrinsic, Laplacian
         L, D_graph = construct_graph(N, self.kNN, self.weight, self.sd)
-        self.L = L
-        self.D_graph = D_graph = D_graph.toarray()
-        
-        # D_graph = scipy.sparse.csr_matrix.power(scipy.sparse.linalg.inv(D_graph), 0.5)
-        
-        self.D_norm = D_norm = np.sqrt(np.linalg.inv(D_graph))
-        self.M = M = D_norm @ L.toarray() @ D_norm
-        
-        # I = scipy.sparse.eye(M.shape[0], format='csr')
-        # M = scipy.sparse.csr_matrix.power(M, self.p) + 10**-6 * I
-
-        self.M_norm = M_norm = np.linalg.matrix_power(M, self.p) + 10**-6 * np.eye(M.shape[0])
-        # M = L.toarray()
+        D_graph = D_graph.toarray()
+        D_norm = np.sqrt(np.linalg.inv(D_graph))
+        M = np.matmul(np.matmul(D_norm , L.toarray()) , D_norm)
+        M_norm = np.linalg.matrix_power(M, self.p) + 10**-6 * np.eye(M.shape[0])
         assert(M_norm.shape == (n,n))
-
-        # M_norm = L.toarray()
-
-        # M = M.toarray()
-        self.K_I = K_I = np.linalg.inv(M_norm)
+        K_I = np.linalg.inv(M_norm)
         assert(K_I.shape == (n,n))
 
-        # print('computing D, S, H')
-        ## apply to both
-        self.D = D = 1/self.L2_coef * K_A[0:l, l:n] - 1/self.manifold_coef * K_I[0:l, l:n]
+        D = 1/self.L2_coef * K_A[0:l, l:n] - 1/self.manifold_coef * K_I[0:l, l:n]
         assert(D.shape == (l, u))
         # Slighly departure from paper
-        self.S = S = 1/self.L2_coef * K_A + 1/self.manifold_coef * K_I
+        S = 1/self.L2_coef * K_A + 1/self.manifold_coef * K_I
         assert(S.shape == (n,n))
-        self.H = H = np.linalg.inv(np.eye(u) + self.mu * S[l:n,l:n])
+        H = np.linalg.inv(np.eye(u) + self.mu * S[l:n,l:n])
         assert(H.shape == (u,u))
-        self.DH = DH = D @ H
+        self.DH = DH = np.matmul(D , H)
         assert(DH.shape == (l, u))
 
-        # print('computing A')
-        ## back to K 2
-        # self.A = A = 1/self.manifold_coef * (K_I[0:l] + self.mu * DH @ K_I[l:n,:])
-        # assert(A.shape == (l,n))
-
-        self.A = A = 1/self.manifold_coef * (K_A[0:l,0:l] + self.mu * DH @ K_A[l:n,0:l])
+        A = 1/self.manifold_coef * (K_A[0:l,0:l] + self.mu * np.matmul(DH , K_A[l:n,0:l]))
         assert(A.shape == (l,l))
         
-        # print('computing B')
-        ## apply to both
-        # self.B = B = 1/self.L2_coef * K_A[0:l, l:n] - 1/self.manifold_coef * K_I[0:l, l:n] + \
-        #     self.mu * DH @ (1/self.L2_coef * K_A[l:n, l:n] - 1/self.manifold_coef * K_I[l:n, l:n])
-        # assert(B.shape == (l,u))
-
-        self.Bn = Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * DH @ K_I[l:n,:])
-        self.B = B = Bn[0:l, 0:l] #= 1/self.manifold_coef * (K_I[0:l,0:l] + self.mu * DH @ K_I[l:n,0:l])
+        Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * np.matmul(DH , K_I[l:n,:]))
+        B = Bn[0:l, 0:l] #= 1/self.manifold_coef * (K_I[0:l,0:l] + self.mu * DH @ K_I[l:n,0:l])
         assert(Bn.shape == (l,n))
         assert(B.shape == (l,l))
 
-        
-        # print('computing C')
-        # self.d = d = DH @ D.T
-        # assert(d.shape == (l,l))
-
-        # self.s_ll = s_ll = 1/self.L2_coef * K_A[0:l, 0:l] + 1/self.manifold_coef * K_I[0:l, 0:l]
-        # # print((S[0:l, 0:l]).shape, d.shape, (l,l))
-        # # print(S)
-        # # print(S[0:l,0:l])
-        # self.C = C = s_ll - self.mu * d
-        # assert(C.shape == (l,l))
-
-        # print('computing K')
-        self.K = K = S[0:l, 0:l] - self.mu * DH @ D.T
+        K = S[0:l, 0:l] - self.mu * np.matmul(DH , D.T)
         assert(K.shape == (l,l))
 
-        # print('solving')
-        #  
-        # self.alpha = 0.5 * np.linalg.inv(
-        #     ### f norm
-        #     2 * self.g * (
-        #         # f_A norm
-        #         self.L2_coef * np.eye(l) @ K_A[0:l, 0:l] + 
-        #         # f_I norm
-        #         self.manifold_coef * A @ M @ A.T # + 
-        #         # diff norm
-        #         # self.mu * B @ B.T
-        #     )
-        #     ### target
-        #     # + (1/4) * C @ C.T
-        #     # + K_A[0:l, 0:l]
-        #     + np.eye(l) @ K_A[0:l,0:l]
-        # ) @ y #@ C @ y
-
         self.alpha = np.linalg.solve( 
-            K @ K + 
-            self.g * (
+            np.matmul(K , K) + 
+            self.g * np.matmul(
                 self.L2_coef * A 
-                + self.manifold_coef * Bn @ M @ Bn.T
+                + self.manifold_coef * np.matmul(np.matmul(Bn , M) , Bn.T)
                 + self.mu * (
-                    A @ (A - B) - B @ (A - B)
+                    np.matmul(A , (A - B)) - np.matmul(B , (A - B))
                 )
             ),
-            K @ y
+            np.matmul(K , y)
         )
         print(self.alpha.shape)
 
