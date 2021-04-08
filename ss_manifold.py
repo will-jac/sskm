@@ -52,7 +52,7 @@ class SSLapRLS(SSKernelMethod):
             gamma=None, degree=3, coef0=1, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
         self.manifold_coef = manifold
-        self.L2_coef = L2_coef
+        self.L2_coef = l2
         self.kNN = kNN
         self.weight = weight
         self.sd = 1.0
