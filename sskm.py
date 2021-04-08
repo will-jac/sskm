@@ -1,5 +1,5 @@
 import numpy as np
-
+import pickle as pkl
 import argparse
 
 # ML methods
@@ -30,7 +30,7 @@ def execute_exp(args):
     if args.method in models.models:
         model = models.models[args.method]
     else:
-        print('error: model', args.model, 'not found') 
+        print('error: model', args.method, 'not found') 
         return
     
     if args.test in tests.tests:
@@ -64,7 +64,11 @@ def execute_exp(args):
             '_weight_' + args.weight + '.out'
 
     with open(fname, 'w') as f:
-        f.write(str(results))
+        out = {
+            args: args,
+            results: results
+        }
+        pkl.dump(out, f)
 
 if __name__ == "__main__":
 # if True:
