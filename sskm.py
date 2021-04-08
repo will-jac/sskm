@@ -54,7 +54,17 @@ def execute_exp(args):
         weight=args.weight)
 
     # run the tets
-    test(model)
+    results = test(model)
+
+    # save the output
+    fname = args.test + '_' + args.method + \
+            '_l2_' + args.l2 + '_man_' + args.manifold + \
+            '_mu_' + args.mu + '_norm_' + args.norm + \
+            '_k_' + args.k + '_p_' + args.p + \
+            '_weight_' + args.weight + '.out'
+
+    with open(fname, 'w') as f:
+        f.write(str(results))
 
 if __name__ == "__main__":
 # if True:

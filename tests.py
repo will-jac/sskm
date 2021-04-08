@@ -11,10 +11,14 @@ import data.checkerboard as checkerboard
 from sklearn.metrics import roc_curve, plot_roc_curve
 
 def test_runner(models, test_funcs, test_funcs_names):
+    results = []
     for test_f, test_name in zip(test_funcs, test_funcs_names):
         print('---- running test:', test_name, ' ----')
+        test_results = []
         for model in models:
-            test_f(model)
+            test_results.append(test_f(model))
+        results.append(test_results)
+    return results
 
 def sphere_test(model, n=1000, u=1000, d = 1000, show_plots=False):
     if u is None:
@@ -73,7 +77,7 @@ def sphere_test(model, n=1000, u=1000, d = 1000, show_plots=False):
         # print(thresh)
         # plt.show()
 
-    return test
+    return acc
 
 def checkerboard_test(model, shape=(1000, 2), noise=0.1, seed=None):
     X, y = checkerboard.generate_data(shape=shape, noise=noise, seed=seed, shuffle=True)
@@ -99,6 +103,8 @@ def checkerboard_test(model, shape=(1000, 2), noise=0.1, seed=None):
     # plt.scatter(test.X[:,0], test.X[:,1], c=labels)
     # plt.show()
 
+    return acc
+
 def adult_test(model, u=0.8):
 
     # (data, _) = util.train_test_valid_split(adult.X, adult.y, split = (0.1, 0.9))
@@ -123,6 +129,8 @@ def adult_test(model, u=0.8):
     wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
     acc = 1.0 - wrong
     print(model.name, ' : acc:', acc)
+
+    return acc
 
 def draw_decision_boundary(model, d=2, lim=(-4,4), n=100, cutoff=0.5):
     import matplotlib.pyplot as plt
