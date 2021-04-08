@@ -49,7 +49,7 @@ def execute_exp(args):
         manifold=args.manifold,
         mu=args.mu,
         g=args.norm,
-        kNN=args.k,
+        # kNN=args.k,
         p=args.p,
         weight=args.weight)
 
