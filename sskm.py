@@ -21,7 +21,7 @@ def create_parser():
     parser.add_argument('-mu', type=float, default=0.1, help='difference coefficient')
     parser.add_argument('-norm', type=float, default=0.1, help='norm coefficient (gamma in coreg)')
     parser.add_argument('-k', type=float, default=0.1, help='number of kNN')
-    parser.add_argument('-p', type=float, default=0.1, help='laplacian exponent')
+    parser.add_argument('-p', type=int, default=2, help='laplacian exponent')
 
     return parser
 
