@@ -13,7 +13,7 @@ class SVM:
         self._kernel = kernel
         self._c = c
 
-    def fit(self, X, y):
+    def fit(self, X, y, **kwargs):
         lagrange_mult = self._compute_multipliers(X, y)
         return self._construct_predictor(X, y, lagrange_mult)
 

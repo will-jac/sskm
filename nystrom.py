@@ -11,7 +11,7 @@ class NystromTransformer():
     # https://www.stat.berkeley.edu/~mmahoney/pubs/kernel_JMLR.pdf
 
     def __init__(self, kernel, n_components = 100, gamma=None, degree=None, coef0=None, 
-            kernel_params=None, n_jobs=None):
+            kernel_params=None, n_jobs=None, **kwargs):
         self.kernel = kernel
         self.n_components = n_components
         self.gamma = gamma

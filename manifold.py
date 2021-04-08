@@ -2,16 +2,15 @@ import numpy as np
 from sklearn.metrics.pairwise import pairwise_distances
 import scipy
 
-
-def construct_graph(X, k=8, weight='binary', sd=1.0):
-    if weight == 'binary':
-        weight = lambda x1, x2 : 1
-    elif weight == 'gaussian':
-        weight = lambda x1, x2 : np.exp(-(x1 - x2)**2 / (2*(sd**2)))
-
+def construct_graph(X, k=8, weight='binary', sd=1.0, plot_manifold=False):
     G = pairwise_distances(X, metric='euclidean')
-    # print('G:')
-    # print(G)
+    
+    if weight == 'binary':
+        weight = lambda i, j : 1
+    elif weight == 'gaussian':
+        weight = lambda i, j : np.exp(-np.sum((X[i] - X[j])**2 / (2*(sd**2))))
+    elif weight == 'euclidean':
+        weight = lambda i, j : G[i,j]
 
     # k+1 because self is always closest
     neighbors = np.argpartition(G, k+1)[:,:(k+1)]
@@ -21,22 +20,30 @@ def construct_graph(X, k=8, weight='binary', sd=1.0):
     W = np.zeros(G.shape)
     for i, row in enumerate(neighbors):
         for n in row:
-            W[i][n] = weight(G[i][i], G[i][n])
+            W[i,n] = weight(i, n)
+            # make it symmetric (this breaks the requirement of exactly k NN, instead at least k NN)
+            W[n,i] = W[i,n]
         # remove the self connection
         W[i,i] = 0
-
-    # this array maybe should be symmetric? but I don't think so
-    # this isn't *strictly* an adjacency
-
-    # print('W:')
-    # print(W)
     
     # make it sparse
     W = scipy.sparse.csr_matrix(W)
 
+    if plot_manifold:
+        import matplotlib.pyplot as plt
+        plt.title(f'Manifold graph')
+        plt.scatter(X[:,0], X[:,1])
+
+        (rows, cols) = W.nonzero()
+        for i, j in zip(rows, cols):
+            x = [X[i,0], X[j,0]]
+            y = [X[i,1], X[j,1]]
+            plt.plot(x,y)
+        plt.show()
+
     # return the laplacian
     D = scipy.sparse.diags([k for _ in range(W.shape[0])], format='csr')
-    return scipy.subtract(D, W), D
+    return (W - D), D
 
 class ManifoldNorm():
     def __init__(self, k=10, weight='gaussian', sd=1):
@@ -52,10 +59,10 @@ class ManifoldNorm():
 from kernel import KernelMethod
 
 class ManifoldRLS(KernelMethod):
-    def __init__(self, kernel, manifold_coef, kNN = 8, weight='gaussian',
+    def __init__(self, kernel, manifold, kNN = 8, weight='gaussian',
             gamma=None, degree=3, coef0=1, kernel_params=None):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.manifold_coef = manifold_coef
+        self.manifold_coef = manifold
         self.kNN = kNN
         self.weight = weight
         self.sd = 1.0
@@ -77,11 +84,11 @@ class ManifoldRLS(KernelMethod):
         return p
 
 class LapRLS(KernelMethod):
-    def __init__(self, kernel, L2_coef, manifold_coef, kNN = 8, weight='gaussian',
+    def __init__(self, kernel, l2, manifold, kNN = 8, weight='gaussian',
             gamma=None, degree=3, coef0=1, kernel_params=None):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.L2_coef = L2_coef
-        self.manifold_coef = manifold_coef
+        self.L2_coef = l2
+        self.manifold_coef = manifold
         self.kNN = kNN
         self.weight = weight
         self.sd = 1.0
@@ -102,6 +109,10 @@ class LapRLS(KernelMethod):
         p = np.dot(self.alpha, K.T)
         # print(p.shape, p)
         return p
+
+
+# Y = np.array([[0,0],[1,1],[2,2],[3,3],[0,1],[1,0],[1,2],[2,1],[2,3],[3,2]])
+# L, D = construct_graph(Y, k=3)
 
 if __name__ == '__main__':
     X = np.array([[0,0],[0,1],[1,1],[1,2],[2,2]])#,[2,3],[3,3],[3,4],[4,4]])

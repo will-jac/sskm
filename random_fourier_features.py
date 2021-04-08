@@ -32,7 +32,7 @@ rng = np.random.default_rng()
 
 class rff:
 
-    def __init__(self, D = 10, sigma = 1.0, alpha=1.0, k = 'gaussian', method = 'linear'):
+    def __init__(self, D = 10, sigma = 1.0, alpha=1.0, k = 'gaussian', method = 'linear', **kwargs):
         """Random Fourier Featurues
         D : Dimension of random features
         k : kernel to use (`gaussian`, `laplacian`)

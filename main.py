@@ -1,196 +1,123 @@
 import numpy as np
-# import matplotlib.pyplot as plt
 
 import argparse
 
 # ML methods
-# others
-from sklearn.neural_network import MLPClassifier
-from sklearn.svm import SVC
+import models
+import tests
 
-# mine
-from random_fourier_features import rff
-from nystrom import NystromTransformer
-from manifold import ManifoldRLS, LapRLS
-from ss_manifold import SSManifoldRLS, SSLapRLS
-from coreg import SSCoReg
-import kernel
+def create_parser():
+    # Parse the command-line arguments
+    parser = argparse.ArgumentParser(description='SS KM', fromfile_prefix_chars='@')
+    parser.add_argument('-method', type=str, default='coreg', help='kernel method to use')
+    parser.add_argument('-test', type=str, default='sphere', help='test to use')
+    parser.add_argument('-kernel', type=str, default='rbf', help='kernel function to use')
+    parser.add_argument('-gamma', type=float, default=1.0, help='gamma for pairwise kernel')
+    parser.add_argument('-degree', type=float, default=3.0, help='degree for pairwise kernel')
+    parser.add_argument('-coef0', type=float, default=1.0, help='coef0 for pairwise kernel')
+    parser.add_argument('-l2', type=float, default=0.1, help='l2 coefficient')
+    parser.add_argument('-manifold', type=float, default=0.1, help='manifold coefficient')
+    parser.add_argument('-weight', type=str, default='gaussian', help='weight for manifold')
+    parser.add_argument('-mu', type=float, default=0.1, help='difference coefficient')
+    parser.add_argument('-norm', type=float, default=0.1, help='norm coefficient (gamma in coreg)')
+    parser.add_argument('-k', type=float, default=0.1, help='number of kNN')
+    parser.add_argument('-p', type=float, default=0.1, help='laplacian exponent')
 
-from SVM import SVM
+    return parser
 
-import util
+def execute_exp(args):
 
-# data sets
-import data.adult as adult
-import data.sphere as sphere
-import data.checkerboard as checkerboard
-
-def test_runner(models, test_funcs, test_funcs_names):
-    for test_f, test_name in zip(test_funcs, test_funcs_names):
-        print('---- running test:', test_name, ' ----')
-        for model in models:
-            test_f(model)
-
-def sphere_test(model, n=1000, u=None, d = 1000, show_plots=False):
-    if u is None:
-        X, y = sphere.generate_data(n=n, d=d)
-        (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3))
+    if args.model in models.models:
+        model = models.models[args.model]
     else:
-        print('generating unlabeled data')
-        X, y, U = sphere.generate_data(n=n, d=d, u=u)
-        # print('U is:', U.shape)
-        (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3), U=U)
-        print('generated data has shape:', train.X.shape, test.X.shape)
-    if show_plots:
-        import matplotlib.pyplot as plt
-        f = plt.figure()
-        plt.title('Labeled Data (input)')
-        labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y]
-        plt.scatter(X[:,0], X[:,1], c=labels)
-        plt.show()
-        plt.close(f)
-
-    # for model, name in zip(models, model_names):
-    if u is None:
-        model.fit(train.X, train.y)
+        print('error: model', args.model, 'not found') 
+        return
+    
+    if args.test in tests.tests:
+        test = tests.tests[args.test]
     else:
-        model.fit(train.X, train.y, train.U)
+        print('error: test', args.test, 'not found')
+        return
 
-    y_pred = model.predict(test.X)
-    y_pred = y_pred.ravel()
-    
-    # classify
-    for i, y_p in enumerate(y_pred):
-        if y_p > 0.5:
-            y_pred[i] = 1
-        else:
-            y_pred[i] = 0
-    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
-    acc = 1.0 - wrong
-    print(model.name, ' : acc:', acc)
+    # construct the model
+    model = model(
+        kernel=args.kernel, 
+        gamma=args.gamma,
+        degree=args.degree,
+        coef0=args.coef0,
+        l2=args.l2,
+        manifold=args.manifold,
+        mu=args.mu,
+        g=args.norm,
+        kNN=args.k,
+        p=args.p,
+        weight=args.weight)
 
-    if show_plots:
-        plt.figure()
-        plt.title(f'{model.name} on sphere (d={d}), %wrong={wrong}')
-        # plot (for sphere)
-        labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y_pred]
-        plt.scatter(test.X[:,0], test.X[:,1], c=labels)
-        plt.show()
-        plt.close(f)
+    # run the tets
+    test(model)
 
-def checkerboard_test(model, shape=(1000, 2), noise=0.1, seed=None):
-    X, y = checkerboard.generate_data(shape=shape, noise=noise, seed=seed, shuffle=True)
-    
-    (train, test) = util.train_test_valid_split(X, y, split=(0.7, 0.3))
-
-    model.fit(train.X, train.y)
-
-    y_pred = model.predict(test.X)
-    y_pred = y_pred.ravel()
-    
-    # classify
-    for i, y_p in enumerate(y_pred):
-        if y_p > 0.5:
-            y_pred[i] = 1
-        else:
-            y_pred[i] = 0
-    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
-    acc = 1.0 - wrong
-    print(model.name, ' : acc:', acc)
-
-    # labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y_pred]
-    # plt.scatter(test.X[:,0], test.X[:,1], c=labels)
-    # plt.show()
-
-def adult_test(model):
-
-    (train, test) = util.train_test_valid_split(adult.X, adult.y, split=(0.7, 0.3))
-
-    # for model, name in zip(models, model_names):
-    model.fit(train.X, train.y)
-
-    y_pred = model.predict(test.X)
-    y_pred = y_pred.ravel()
-    
-    # classify
-    for i, y_p in enumerate(y_pred):
-        if y_p > 0.5: # TODO: should be 0?
-            y_pred[i] = 1
-        else:
-            y_pred[i] = -1
-    wrong = util.percent_wrong(y_pred.ravel(), test.y.ravel())
-    acc = 1.0 - wrong
-    print(model.name, ' : acc:', acc)
-
-def draw_decision_boundary(model, d=2, lim=(-4,4), n=100, cutoff=0.5):
-    import matplotlib.pyplot as plt
-    X = np.empty((n**2, 2))
-    for i in range(n):
-        for j in range(n):
-            X[i*n+j] = [float(i + lim[0]) / n, float(j + lim[0]) / n]
-    y = model.predict(X)
-    labels = ['#1f77b4' if abs(l) < cutoff else '#ff7f0e' for l in y]
-    plt.scatter(X[:,0], X[:,1], c=labels)
-    plt.show()
+if __name__ == "__main__":
+# if True:
+    parser = create_parser()
+    args = parser.parse_args()
+    execute_exp(args)
 
 
-# if __name__ == "__main__":
-if True:
-    # parser = create_parser()
-    # args = parser.parse_args()
-    from sklearn.kernel_approximation import Nystroem
+    # svm = SVC()
+    # svm.name = 'SVM'
 
-    class Nystrom_Ridge():
-        def __init__(self, n_components=1000):
-            self.name = 'Nystrom + Ridge, m='+str(n_components)
-            self.transformer =  NystromTransformer('rbf', n_components=n_components, gamma=0.2) 
-            # self.transformer = Nystroem(gamma=0.2, n_components=10) 
-            self.kernel_method = kernel.RidgeKernel('precomputed', 1.0)
-        def fit(self, X, y):
-            X = self.transformer.fit(X, y).transform(X)
-            self.kernel_method.fit(X, y)
+    # models = [
+    #     # rff(D=10),
+    #     # rff(D=100),
+    #     # rff(D=1000),
+    #     # Nystrom_Ridge(10),
+    #     # Nystrom_Ridge(100),
+    #     # Nystrom_Ridge(1000),
+    #     # svm,
+    #     # kernel.LS(),
+    #     # kernel.KLS('rbf'),
+    #     # kernel.RLSKernel('rbf', 1.0, True, True),
+    #     # kernel.RLSKernel('rbf', 1.0, False, True),
 
-        def predict(self, X):
-            X = self.transformer.transform(X)
-            return self.kernel_method.predict(X)
+    #     # kernel.RidgeKernel('rbf', 1.0),
 
-    svm = SVC()
-    svm.name = 'SVM'
+    #     # kernel.RLSKernel('rbf', 1.0, True, True),
+    #     ManifoldRLS('rbf', 0.1, kNN=2),
 
-    models = [
-        # rff(D=10),
-        # rff(D=100),
-        # rff(D=1000),
-        # Nystrom_Ridge(10),
-        # Nystrom_Ridge(100),
-        # Nystrom_Ridge(1000),
-        # svm,
-        # kernel.LS(),
-        # kernel.KLS('rbf'),
-        # kernel.RidgeKernel('rbf', 1.0),
-        # ManifoldRLS('rbf', 0.1),
-        # SSManifoldRLS('rbf', 0.1),
-        # SSLapRLS('rbf', 0.1, 0.1),
-        SSCoReg('rbf', 0.1, 1, 1),
-    ]
-    tests = [
-        lambda model : sphere_test(model, n=100, d=2, u=100, show_plots=False),
-        # lambda model : checkerboard_test(model, seed=1, noise=0.0),
-        # lambda model : checkerboard_test(model, seed=1, noise=0.2),
-        # lambda model : adult_test(model)
-    ]
-    test_names = [
-        'sphere', 'checkerboard', 'checkerboard_noise', 'adult'
-    ]
+    #     # SSManifoldRLS('rbf', 0.01),
+    #     # SSLapRLS('rbf', 0, 0.01),
+    #     SSCoMR('rbf', g=1, L2_coef=0.001, manifold_coef=0.1, mu=0.1),
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=10, mu=0.1),
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=1, mu=0.01),
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=0.1, mu=0.01),
 
-    # X, y = checkerboard.generate_data((100000, 2), noise=0.1, seed=1, shuffle=False)
-    # labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y]
-    # plt.scatter(X[:,0], X[:,1], c=labels)
-    # plt.show()
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=100, mu=0.01),
+    #     # SSCoReg('rbf', g=0.01, L2_coef=1, manifold_coef=10, mu=0.01),
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=1, mu=1),
+    #     # SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=10, mu=1),
+    #     SSCoReg('rbf', g=0.001, L2_coef=10, manifold_coef=100, mu=1),
+    #     SSCoRegSolver('rbf', g=0.001, L2_coef=10, manifold_coef=100, mu=1),
+    # ]
+    # tests = [
+    #     lambda model : sphere_test(model, n=100, d=2, u=100, show_plots=False),
+    #     # lambda model : checkerboard_test(model, seed=1, noise=0.0),
+    #     # lambda model : checkerboard_test(model, seed=1, noise=0.2),
+    #     # lambda model : adult_test(model)
+    # ]
+    # test_names = [
+    #     'sphere',
+    #     # 'checkerboard', 'checkerboard_noise',
+    #     'adult'
+    # ]
 
-    test_runner(models, tests, test_names)
+    # # X, y = checkerboard.generate_data((100000, 2), noise=0.1, seed=1, shuffle=False)
+    # # labels = ['#1f77b4' if abs(l) < 0.5 else '#ff7f0e' for l in y]
+    # # plt.scatter(X[:,0], X[:,1], c=labels)
+    # # plt.show()
 
-    draw_decision_boundary(models[0])
+    # test_runner(models, tests, test_names)
+
+    # [draw_decision_boundary(m) for m in models]
 
 # def create_parser():
 #     parser = argparse.ArgumentParser(description='Kernel Method Bake-Off')
@@ -212,9 +139,9 @@ if True:
 #         model = SVC()
 #     if m == 'SVM':
 #         model = SVM(kernel = args.kernel, c = args.C)
-    
+
 #     if args.dataset == 'adult':
 #         adult_test([model], [args.model])
 #     elif args.dataset == 'sphere':
         # sphere_test([model], [args.model], show_plots=True)
-    
+

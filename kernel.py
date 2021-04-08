@@ -41,7 +41,7 @@ class KernelMethod():
     which has the general solution
     f* = sum(alpha_i * K(x, x_i))
     '''
-    def __init__(self, kernel, gamma=None, degree=3.0, coef0=1.0, kernel_params=None):
+    def __init__(self, kernel, gamma=None, degree=3.0, coef0=1.0, kernel_params=None, **kwargs):
         self.kernel = kernel
         self.gamma = gamma
         self.degree = degree
@@ -70,7 +70,7 @@ class KernelMethod():
         #     print('warning: no suitable kernel found. Cannot continue.')
         #     return
 
-    def fit(self, X, y):
+    def fit(self, X, y, U=None):
         K = self._compute_kernel(X)
         # print('computing kernel for X', X.shape, 'K has shape', K.shape)
         self.X_train = X
@@ -82,12 +82,32 @@ class KernelMethod():
     def _solve(self, K, y):
         ...
 
+class SSKernelMethod(KernelMethod):
+    '''
+    Base class for semi-supervised kernel methods, which solve an optimization problem of the following form:
+    min_{f in H_K} 1/l sum(loss(y_i, f(x_i))) + gamma ||f||^2_K
+
+    which has the general solution
+    f* = sum(alpha_i * K(x, x_i))
+    '''
+    def __init__(self, kernel, gamma=None, degree=3.0, coef0=1.0, kernel_params=None, **kwargs):
+        super().__init__(kernel, gamma, degree, coef0, kernel_params)
+      
+    def fit(self, X, y, U):
+        ...
+        
+    def predict(self, X):
+        ...
+
+    def _solve(self, K, y):
+        ...
+
 # standard least-squares regression w/ Ridge regression (eg L2 regularization)
 from sklearn.linear_model import Ridge as _Ridge
 
 class RidgeKernel(KernelMethod):
 
-    def __init__(self, kernel, L2_coef, gamma=None, degree=3, coef0=1, kernel_params=None):
+    def __init__(self, kernel, L2_coef, gamma=None, degree=3, coef0=1, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
         self.lm = _Ridge(alpha = L2_coef)
         self.name = 'ridge'
@@ -106,38 +126,54 @@ class RidgeKernel(KernelMethod):
         # print(p.shape, p)
         return p
 
-# class RLSKernel(KernelMethod):
-#     '''
-#     Solution leads to the form:
+class RLSKernel(KernelMethod):
+    '''
+    Solution leads to the form:
 
-#     alpha = (K - gamma * l * I)^-1 * Y
-#     '''
-#     def __init__(self, kernel, gamma):
-#         super().__init__(kernel, gamma)
+    alpha = (K - gamma * l * I)^-1 * Y
+    '''
+    def __init__(self, kernel, gamma, simple=True, solve=False, **kwargs):
+        super().__init__(kernel, gamma)
+        self.name = 'RLS'
+        self.simple = simple
+        self.solve = solve
 
-#     def _solve(self, y):
-#         l = self.K.shape[0]
-#         I = np.diag([l for _ in range(l)])
-#         self.alpha = np.invert(self.K + I) * y 
-    
-#     def predict(self, X):
-#         # TODO: vectorize
-#         # XX = self.X * X.T
-#         # test_norms = (np.multiply(X.T, X.T).sum(axis=0)).T
-#         # K = np.array(np.ones((m, 1), dtype = np.float64)) * test_norms.T
-#         # K = K + self.K * np.array(np.ones((1, n), dtype = np.float64))
-#         # K = K - 2 * XX
-#         # K = - gamma * K
-#         # K = np.exp(K)
-#         # return K.A.T
+    def _solve(self, K, y):
+        print(K.shape)
+        if self.solve:
+            if self.simple:
+                self.alpha = np.linalg.solve(K + 1* np.eye(K.shape[0]), y)
+            else:
+                self.alpha = np.linalg.solve(K @ K + K, K @ y)
+        else:
+            if self.simple:
+                self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y 
+            else:
+                self.alpha = np.linalg.inv(K @ K + K) @ K @ y
+        
+        # self.alpha = np.linalg.inv(
+        #     K @ K + np.eye(K.shape[0])
+        # ) @ K @ y
+    def predict(self, X):
+        # TODO: vectorize
+        # XX = self.X * X.T
+        # test_norms = (np.multiply(X.T, X.T).sum(axis=0)).T
+        # K = np.array(np.ones((m, 1), dtype = np.float64)) * test_norms.T
+        # K = K + self.K * np.array(np.ones((1, n), dtype = np.float64))
+        # K = K - 2 * XX
+        # K = - gamma * K
+        # K = np.exp(K)
+        # return K.A.T
+        K = self._compute_kernel(X, self.X_train)
+        return np.dot(self.alpha, K.T)
 
 import least_squares as ls
 
 class LS():
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.name = 'least squares'
 
-    def fit(self, X, y):
+    def fit(self, X, y, U=None):
         solution = ls.solve(X, y)
         print('*'*5, 'solution', '*'*5)
         print(solution['message'])
@@ -154,7 +190,7 @@ class LS():
         return p
 
 class KLS(KernelMethod):
-    def __init__(self, kernel, gamma=None, degree=3, coef0=1, kernel_params=None):
+    def __init__(self, kernel, gamma=None, degree=3, coef0=1, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
         self.name = 'kernel least squares'
 

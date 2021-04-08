@@ -3,17 +3,19 @@ from sklearn.metrics.pairwise import pairwise_distances
 import scipy
 
 from manifold import construct_graph, ManifoldNorm
-from ss_kernel import SSKernelMethod
+from kernel import SSKernelMethod
+
+from sklearn.linear_model import Ridge
 
 class SSManifoldRLS(SSKernelMethod):
-    def __init__(self, kernel, manifold_coef, kNN = 8, weight='gaussian',
-            gamma=None, degree=3, coef0=1, kernel_params=None):
+    def __init__(self, kernel, manifold, kNN = 8, weight='gaussian',
+            gamma=None, degree=3, coef0=1, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.manifold_coef = manifold_coef
+        self.manifold_coef = manifold
         self.kNN = kNN
         self.weight = weight
         self.sd = 1.0
-        self.name = 'Manifold RLS'
+        self.name = 'SS Manifold RLS'
 
     def fit(self, X, y, U):
         self.l = X.shape[0]
@@ -46,15 +48,15 @@ class SSManifoldRLS(SSKernelMethod):
         return p
 
 class SSLapRLS(SSKernelMethod):
-    def __init__(self, kernel, L2_coef, manifold_coef, kNN = 8, weight='gaussian',
-            gamma=None, degree=3, coef0=1, kernel_params=None):
+    def __init__(self, kernel, l2, manifold, kNN = 8, weight='gaussian',
+            gamma=None, degree=3, coef0=1, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.manifold_coef = manifold_coef
+        self.manifold_coef = manifold
         self.L2_coef = L2_coef
         self.kNN = kNN
         self.weight = weight
         self.sd = 1.0
-        self.name = 'Lap RLS'
+        self.name = 'SS Lap RLS'
 
     def fit(self, X, y, U):
         self.l = X.shape[0]
