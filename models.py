@@ -10,7 +10,7 @@ from ss_manifold import SSManifoldRLS, SSLapRLS
 from coreg import SSCoReg, SSCoMR, SSCoRegSolver
 import kernel
 
-from SVM import SVM
+# from SVM import SVM
 
 import util
 
