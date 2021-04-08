@@ -119,7 +119,7 @@ class SSCoReg(SSKernelMethod):
 
         # print('computing K_A')
         # kernel 1: ambient, RLS
-                K_A = self._compute_kernel(N)
+        K_A = self._compute_kernel(N)
         assert(K_A.shape == (n,n))
 
         L, D_graph = construct_graph(N, self.kNN, self.weight, self.sd)
