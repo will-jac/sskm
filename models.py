@@ -7,7 +7,7 @@
 # from nystrom import NystromTransformer
 # from manifold import ManifoldRLS, LapRLS
 # from ss_manifold import SSManifoldRLS, SSLapRLS
-from coreg import SSCoReg, SSCoMR, SSCoRegSolver
+from coreg import SSCoReg, SSCoRegSolver
 # import kernel
 
 # from SVM import SVM
