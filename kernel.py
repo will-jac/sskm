@@ -77,10 +77,10 @@ class KernelMethod():
         self._solve(K, y)
     
     def predict(self, X):
-        ...
+        return
 
     def _solve(self, K, y):
-        ...
+        return
 
 class SSKernelMethod(KernelMethod):
     '''
@@ -143,13 +143,13 @@ class RLSKernel(KernelMethod):
         if self.solve:
             if self.simple:
                 self.alpha = np.linalg.solve(K + 1* np.eye(K.shape[0]), y)
-            else:
-                self.alpha = np.linalg.solve(K @ K + K, K @ y)
+            # else:
+            #     self.alpha = np.linalg.solve(K @ K + K, K @ y)
         else:
             if self.simple:
                 self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y 
-            else:
-                self.alpha = np.linalg.inv(K @ K + K) @ K @ y
+            # else:
+            #     self.alpha = np.linalg.inv(K @ K + K) @ K @ y
         
         # self.alpha = np.linalg.inv(
         #     K @ K + np.eye(K.shape[0])
