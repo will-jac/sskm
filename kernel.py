@@ -145,9 +145,9 @@ class RLSKernel(KernelMethod):
                 self.alpha = np.linalg.solve(K + 1* np.eye(K.shape[0]), y)
             # else:
             #     self.alpha = np.linalg.solve(K @ K + K, K @ y)
-        else:
-            if self.simple:
-                self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y 
+        # else:
+        #     if self.simple:
+        #         self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y 
             # else:
             #     self.alpha = np.linalg.inv(K @ K + K) @ K @ y
         
