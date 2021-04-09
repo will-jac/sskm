@@ -31,7 +31,7 @@ def construct_graph(X, k=8, weight='binary', sd=1.0, plot_manifold=False):
 
     if plot_manifold:
         import matplotlib.pyplot as plt
-        plt.title(f'Manifold graph')
+        plt.title('Manifold graph')
         plt.scatter(X[:,0], X[:,1])
 
         (rows, cols) = W.nonzero()
