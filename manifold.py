@@ -58,67 +58,67 @@ class ManifoldNorm():
 
 from kernel import KernelMethod
 
-class ManifoldRLS(KernelMethod):
-    def __init__(self, kernel, manifold, kNN = 8, weight='gaussian',
-            gamma=None, degree=3, coef0=1, kernel_params=None):
-        super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.manifold_coef = manifold
-        self.kNN = kNN
-        self.weight = weight
-        self.sd = 1.0
-        self.name = 'Manifold RLS'
+# class ManifoldRLS(KernelMethod):
+#     def __init__(self, kernel, manifold, kNN = 8, weight='gaussian',
+#             gamma=None, degree=3, coef0=1, kernel_params=None):
+#         super().__init__(kernel, gamma, degree, coef0, kernel_params)
+#         self.manifold_coef = manifold
+#         self.kNN = kNN
+#         self.weight = weight
+#         self.sd = 1.0
+#         self.name = 'Manifold RLS'
 
-    def _solve(self, K, y):
-        L, _ = construct_graph(self.X_train, self.kNN, self.weight, self.sd)
-        # print('solving: K, L, y', K.shape, L.shape, y.shape)
-        self.alpha = np.dot(np.linalg.pinv(
-                np.eye(K.shape[0]) @ K 
-                + self.manifold_coef * (L @ K)
-            ), y)
+#     def _solve(self, K, y):
+#         L, _ = construct_graph(self.X_train, self.kNN, self.weight, self.sd)
+#         # print('solving: K, L, y', K.shape, L.shape, y.shape)
+#         self.alpha = np.dot(np.linalg.pinv(
+#                 np.eye(K.shape[0]) @ K 
+#                 + self.manifold_coef * (L @ K)
+#             ), y)
 
-    def predict(self, X):
-        K = self._compute_kernel(X, self.X_train)
-        # print('predicting', self.alpha.shape, K.shape)
-        p = np.dot(self.alpha, K.T)
-        # print(p.shape, p)
-        return p
+#     def predict(self, X):
+#         K = self._compute_kernel(X, self.X_train)
+#         # print('predicting', self.alpha.shape, K.shape)
+#         p = np.dot(self.alpha, K.T)
+#         # print(p.shape, p)
+#         return p
 
-class LapRLS(KernelMethod):
-    def __init__(self, kernel, l2, manifold, kNN = 8, weight='gaussian',
-            gamma=None, degree=3, coef0=1, kernel_params=None):
-        super().__init__(kernel, gamma, degree, coef0, kernel_params)
-        self.L2_coef = l2
-        self.manifold_coef = manifold
-        self.kNN = kNN
-        self.weight = weight
-        self.sd = 1.0
-        self.name = 'Laplacian RLS'
+# class LapRLS(KernelMethod):
+#     def __init__(self, kernel, l2, manifold, kNN = 8, weight='gaussian',
+#             gamma=None, degree=3, coef0=1, kernel_params=None):
+#         super().__init__(kernel, gamma, degree, coef0, kernel_params)
+#         self.L2_coef = l2
+#         self.manifold_coef = manifold
+#         self.kNN = kNN
+#         self.weight = weight
+#         self.sd = 1.0
+#         self.name = 'Laplacian RLS'
         
-    def _solve(self, K, y):
-        L, _ = construct_graph(self.X_train, self.kNN, self.weight, self.sd)
-        # print('solving: K, L, y', K.shape, L.shape, y.shape)
-        self.alpha = np.dot(np.linalg.pinv(
-            np.eye(K.shape[0]) @ K 
-                + self.L2_coef * np.eye(K.shape[0])
-                + self.manifold_coef * (L @ K)
-            ), y)
+#     def _solve(self, K, y):
+#         L, _ = construct_graph(self.X_train, self.kNN, self.weight, self.sd)
+#         # print('solving: K, L, y', K.shape, L.shape, y.shape)
+#         self.alpha = np.dot(np.linalg.pinv(
+#             np.eye(K.shape[0]) @ K 
+#                 + self.L2_coef * np.eye(K.shape[0])
+#                 + self.manifold_coef * (L @ K)
+#             ), y)
 
-    def predict(self, X):
-        K = self._compute_kernel(X, self.X_train)
-        # print('predicting:', self.alpha.shape, K.shape)
-        p = np.dot(self.alpha, K.T)
-        # print(p.shape, p)
-        return p
+#     def predict(self, X):
+#         K = self._compute_kernel(X, self.X_train)
+#         # print('predicting:', self.alpha.shape, K.shape)
+#         p = np.dot(self.alpha, K.T)
+#         # print(p.shape, p)
+#         return p
 
 
-# Y = np.array([[0,0],[1,1],[2,2],[3,3],[0,1],[1,0],[1,2],[2,1],[2,3],[3,2]])
-# L, D = construct_graph(Y, k=3)
+# # Y = np.array([[0,0],[1,1],[2,2],[3,3],[0,1],[1,0],[1,2],[2,1],[2,3],[3,2]])
+# # L, D = construct_graph(Y, k=3)
 
-if __name__ == '__main__':
-    X = np.array([[0,0],[0,1],[1,1],[1,2],[2,2]])#,[2,3],[3,3],[3,4],[4,4]])
-    y = np.array([[0],[1],[1],[2],[2]])
-    L, _ = construct_graph(X, 2, weight='gaussian')
-    print(L.toarray())
-    mn = ManifoldNorm(k=2)
-    n = mn.norm(X, y)
-    print(n)
+# if __name__ == '__main__':
+#     X = np.array([[0,0],[0,1],[1,1],[1,2],[2,2]])#,[2,3],[3,3],[3,4],[4,4]])
+#     y = np.array([[0],[1],[1],[2],[2]])
+#     L, _ = construct_graph(X, 2, weight='gaussian')
+#     print(L.toarray())
+#     mn = ManifoldNorm(k=2)
+#     n = mn.norm(X, y)
+#     print(n)
