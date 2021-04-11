@@ -57,7 +57,7 @@ def execute_exp(args):
     results = test(model)
 
     # save the output
-    fname = args.test + '_' + args.method + \
+    fname = '~/sskm/results/models/' +  args.test + '_' + args.method + \
             '_l2_' + args.l2 + '_man_' + args.manifold + \
             '_mu_' + args.mu + '_norm_' + args.norm + \
             '_k_' + args.k + '_p_' + args.p + \
