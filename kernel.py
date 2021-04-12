@@ -7,7 +7,7 @@ from scipy.sparse import linalg as sp_linalg
 
 def linear():
     return lambda x, y : np.inner(x,y)
-        
+
 def gaussian(sigma=1.0):
     return lambda x, y : np.exp(-np.sqrt(np.linalg.norm(x-y) ** 2 / (2 * sigma ** 2)))
 
@@ -27,7 +27,7 @@ def compute_kernel_matrix(kernel, X, K=None):
     for i, x_i in enumerate(X):
         for j, x_j in enumerate(X):
             K[i, j] = kernel(x_i, x_j)
-    
+
     print('K constructed:', K.shape)
     return K
 
@@ -59,7 +59,7 @@ class KernelMethod():
 
         # if callable(self._kernel):
         #     if K is None:
-        #         return compute_kernel_matrix(self._kernel, X) 
+        #         return compute_kernel_matrix(self._kernel, X)
         #     else:
         #         return compute_kernel_matrix(self.kernel, X, K)
 
@@ -75,7 +75,7 @@ class KernelMethod():
         # print('computing kernel for X', X.shape, 'K has shape', K.shape)
         self.X_train = X
         self._solve(K, y)
-    
+
     def predict(self, X):
         return
 
@@ -92,15 +92,16 @@ class SSKernelMethod(KernelMethod):
     '''
     def __init__(self, kernel, gamma=None, degree=3.0, coef0=1.0, kernel_params=None, **kwargs):
         super().__init__(kernel, gamma, degree, coef0, kernel_params)
-      
-    def fit(self, X, y, U):
-        ...
-        
-    def predict(self, X):
-        ...
 
+    def fit(self, X, y, U):
+        # ...
+        return
+    def predict(self, X):
+        # ...
+        return
     def _solve(self, K, y):
-        ...
+        # ...
+        return
 
 # standard least-squares regression w/ Ridge regression (eg L2 regularization)
 from sklearn.linear_model import Ridge as _Ridge
@@ -147,10 +148,10 @@ class RLSKernel(KernelMethod):
             #     self.alpha = np.linalg.solve(K @ K + K, K @ y)
         # else:
         #     if self.simple:
-        #         self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y 
+        #         self.alpha = np.linalg.inv(K + 1* np.eye(K.shape[0])) @ y
             # else:
             #     self.alpha = np.linalg.inv(K @ K + K) @ K @ y
-        
+
         # self.alpha = np.linalg.inv(
         #     K @ K + np.eye(K.shape[0])
         # ) @ K @ y
@@ -214,7 +215,7 @@ class KLS(KernelMethod):
         # return np.dot(K, self.dual_coef_)
         p = np.dot(K, self.alpha)
         print('predicting X', X.shape, '->', K.shape, '->', p.shape)
-        
+
         # print(p.shape, p)
         return p
 
