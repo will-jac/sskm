@@ -22,14 +22,18 @@ class SSCoRegSolver(SSKernelMethod):
         self.name = 'CoReg Solver'
 
     def fit(self, X, y, U):
-        self.U_train = U
-        self.X_train = X
-
+        # print('fitting coreg...')
         self.l = l = X.shape[0]
         self.u = u = U.shape[0]
         self.n = n = l + u
+        # print('fitting to:', X.shape, y.shape, U.shape)
+        self.U_train = U
+        self.X_train = X
         N = np.append(X, U, axis=0)
+        # print('l =', l, 'u =', u, 'n =', n)
 
+        # print('computing K_A')
+        # kernel 1: ambient, RLS
         K_A = self._compute_kernel(N)
         assert(K_A.shape == (n,n))
 
@@ -52,13 +56,17 @@ class SSCoRegSolver(SSKernelMethod):
         self.DH = DH = np.matmul(D , H)
         assert(DH.shape == (l, u))
 
-        A = 1/self.manifold_coef * (K_A[0:l,0:l] + self.mu * np.matmul(DH , K_A[l:n,0:l]))
-        assert(A.shape == (l,l))
+        An = 1/self.manifold_coef * (K_A[0:l,:] + self.mu * np.matmul(DH , K_A[l:n,:]))
+        Al = An[0:l,0:l]
+        Au = An[0:l,l:n]
+        assert(An.shape == (l,n))
+        assert(Al.shape == (l,l))
         
         Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * np.matmul(DH , K_I[l:n,:]))
-        B = Bn[0:l, 0:l] #= 1/self.manifold_coef * (K_I[0:l,0:l] + self.mu * DH @ K_I[l:n,0:l])
+        Bl = Bn[0:l, 0:l] #= 1/self.manifold_coef * (K_I[0:l,0:l] + self.mu * DH @ K_I[l:n,0:l])
+        Bu = Bn[0:l,l:n]
         assert(Bn.shape == (l,n))
-        assert(B.shape == (l,l))
+        assert(Bl.shape == (l,l))
 
         K = S[0:l, 0:l] - self.mu * np.matmul(DH , D.T)
         assert(K.shape == (l,l))
@@ -144,7 +152,7 @@ class SSCoReg(SSKernelMethod):
         An = 1/self.manifold_coef * (K_A[0:l,:] + self.mu * np.matmul(DH , K_A[l:n,:]))
         Al = An[0:l,0:l]
         Au = An[0:l,l:n]
-        assert(A.shape == (l,n))
+        assert(An.shape == (l,n))
         assert(Al.shape == (l,l))
         
         Bn = 1/self.manifold_coef * (K_I[0:l,:] + self.mu * np.matmul(DH , K_I[l:n,:]))
